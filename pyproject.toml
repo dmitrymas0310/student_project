@@ -11,6 +11,12 @@ uvicorn = "^0.38.0"
 alembic = "^1.17.2"
 sqlalchemy = "^2.0.44"
 asyncpg = "^0.30.0"
+fastapi = "^0.121.3"
+passlib = "^1.7.4"
+jose = "^1.0.0"
+python-jose = "^3.5.0"
+dynaconf = "^3.2.12"
+pydantic = {extras = ["email"], version = "^2.12.4"}
 
 
 [build-system]
