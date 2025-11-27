@@ -15,7 +15,7 @@ from fastapi import Depends
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from model import Faculty, Course, User
+from model import Faculty, Course, User, Student, Score
 from db import get_session
 
 
@@ -38,7 +38,7 @@ class StudentRepository:
 
         return faculty
     
-    #Course CRUD
+    #Course
 
     async def get_course_by_name(self, name: str) -> Optional[Course]:
         result = await self.db.execute(
@@ -52,6 +52,150 @@ class StudentRepository:
         await self.db.commit()
         await self.db.refresh(course)
         return course
+    
+    #Student
+
+    async def get_student(
+            self,
+            lastname: Optional[str],
+            firstname: Optional[str],
+            faculty_id
+    ) -> Optional[Student]:
+        if not lastname or not firstname or faculty_id is None:
+            return None
+        
+        student = select(Student).where(
+            Student.lastname == lastname,
+            Student.firstname == firstname,
+            Student.faculty_id == faculty_id
+        )
+        
+        result = await self.db.execute(student)
+        return result.scalar_one_or_none()
+    
+    async def create_student(self, student_date: dict) -> Student:
+        """
+        Ожидается словарь (student_date):
+        {
+            "lastname": str,
+            "firstname": str,
+            "faculty": Faculty  # объект факультета
+        }
+        """
+
+        student = Student(**student_date)
+        self.db.add(student)
+        await self.db.commit()
+        await self.db.refresh(student)
+        return student
+    
+    #Score
+
+    async def create_score(self, score_data: dict) -> Score:
+        """
+        Ожидается словарь(score_datr):
+        {
+            "student": Student,
+            "course": Course,
+            "score": int
+        }
+        """
+        score = Score(**score_data)
+        self.db.add(score)
+        await self.db.commit()
+        await self.db.refresh(score)
+        return score
+
+    #Pagination
+
+    async def get_students(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Student]:
+        if skip < 0:
+            skip = 0
+        if limit <= 0:
+            limit = 100
+
+        stmt = (
+            select(Student)
+            .order_by(Student.lastname, Student.firstname)
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    #Задачи (hw) ---------- МЕТОДЫ ПО ЗАДАНИЮ ----------
+
+    async def get_students_by_faculty(self, faculty_name: Optional[str]) -> list[Student]:
+        """
+        получение списка студентов по названию факультета
+        """
+        if not faculty_name:
+            return []
+
+        stmt = (
+            select(Student)
+            .join(Faculty, Student.faculty_id == Faculty.id)
+            .where(Faculty.name == faculty_name)
+            .order_by(Student.lastname, Student.firstname)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    async def get_unique_courses(self) -> list[str]:
+        """
+        получение списка уникальных курсов
+        """
+        stmt = select(Course.name).distinct().order_by(Course.name)
+        result = await self.db.execute(stmt)
+        rows = result.all()  # [(name,), (name2,), ...]
+        return [row[0] for row in rows]
+
+    async def get_avg_score_by_faculty(self, faculty_name: Optional[str]) -> Optional[float]:
+        """
+        получение среднего балла по факультету
+        """
+        if not faculty_name:
+            return None
+
+        stmt = (
+            select(func.avg(Score.score))
+            .join(Student, Score.student_id == Student.id)
+            .join(Faculty, Student.faculty_id == Faculty.id)
+            .where(Faculty.name == faculty_name)
+        )
+        result = await self.db.execute(stmt)
+        value = result.scalar()
+        return float(value) if value is not None else None
+
+    async def get_students_by_course_with_score_below(
+        self,
+        course_name: Optional[str],
+        threshold: int = 30,
+    ) -> list[Student]:
+        """
+        получение списка студентов по выбранному курсу с оценкой ниже threshold (по умолчанию 30)
+        """
+        if not course_name:
+            return []
+
+        stmt = (
+            select(Student)
+            .join(Score, Score.student_id == Student.id)
+            .join(Course, Score.course_id == Course.id)
+            .where(
+                Course.name == course_name,
+                Score.score < threshold,
+            )
+            .order_by(Student.lastname, Student.firstname)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+
     
     #User 
 

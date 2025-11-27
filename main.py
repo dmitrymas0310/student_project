@@ -6,10 +6,17 @@ from v1_api import router as auth_router
 
 
 import asyncio
+from db import async_session_maker
+from service import StudentService
 from model import create_db
 
 async def main():
-    await create_db()
+    async with async_session_maker() as session:
+        service = StudentService(session)
+
+        #Заполнить БД из CSV
+        await service.load_from_csv("data/students.csv")
+
 
 app = FastAPI(
     title=settings.app.app_name,
@@ -21,7 +28,7 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 
 if __name__ == "__main__":
 
-    #asyncio.run(main())
+    asyncio.run(main())
 
     uvicorn.run(
         "main:app",

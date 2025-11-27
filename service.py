@@ -4,12 +4,66 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+import csv
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from repository import UserRepository, get_user_repository
+from repository import StudentRepository, UserRepository, get_user_repository
 from schemas import UserResponse, UserRegistrate
 from configs import settings
 from schemas import TokenData
 from schemas import UserResponse
+
+
+class StudentService:
+    def __init__(self, db: AsyncSession):
+        self.repo = StudentRepository(db)
+
+    async def load_from_csv(self, file_path: str) -> None:
+        with open(file_path, encoding="utf-8") as f:
+            # если файл классический csv ("," или ";" — csv сам разрулит)
+            reader = csv.reader(f)
+            next(reader, None)  # заголовок
+
+            for row in reader:
+                # на всякий случай берём только первые 5 колонок
+                last_name, first_name, faculty_name, course_name, score_str = row[:5]
+
+                last_name = last_name.strip()
+                first_name = first_name.strip()
+                faculty_name = faculty_name.strip()
+                course_name = course_name.strip()
+                score_value = int(score_str)
+
+                faculty = await self.repo.get_faculty_by_name(faculty_name)
+                if faculty is None:
+                    faculty = await self.repo.create_faculty(faculty_name)
+
+                student = await self.repo.get_student(
+                    lastname=last_name,
+                    firstname=first_name,
+                    faculty_id=faculty.id,
+                )
+                if student is None:
+                    student = await self.repo.create_student(
+                        {
+                            "lastname": last_name,
+                            "firstname": first_name,
+                            "faculty": faculty,
+                        }
+                    )
+
+                course = await self.repo.get_course_by_name(course_name)
+                if course is None:
+                    course = await self.repo.create_course(course_name)
+
+                await self.repo.create_score(
+                    {
+                        "student": student,
+                        "course": course,
+                        "score": score_value,
+                    }
+                )
+
 
 
 class UserService:

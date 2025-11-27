@@ -17,6 +17,8 @@ jose = "^1.0.0"
 python-jose = "^3.5.0"
 dynaconf = "^3.2.12"
 pydantic = {extras = ["email"], version = "^2.12.4"}
+celery = "^5.5.3"
+redis = "^7.1.0"
 
 
 [build-system]
