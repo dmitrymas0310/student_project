@@ -25,6 +25,20 @@ class DBConfig(BaseModel):
 
     # driver://user:password@host:port/db_name
 
+class RedisConfig(BaseModel):
+    redis_host: str
+    redis_port: int
+    broker_db: int
+    backend_db: int
+
+    @property
+    def broker_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.broker_db}"
+
+    @property
+    def backend_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.backend_db}"
+
 
 class AuthConfig(BaseModel):
     sekret_key: str
@@ -36,6 +50,7 @@ class Settings(BaseModel):
     app: APPConfig
     db: DBConfig
     auth: AuthConfig
+    redis: RedisConfig
 
 
 env_settings = Dynaconf(settings_file=["settings.toml"])
@@ -44,6 +59,7 @@ settings = Settings(
     app=env_settings["app_settings"],
     db=env_settings["db_settings"],
     auth=env_settings["auth_settings"],
+    redis=env_settings["redis_settings"]
 )
 
 

@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta
 
 
+
 from fastapi import Depends, HTTPException, status, APIRouter
 
-
+from tasks import import_students_from_csv
 from service import AuthService, get_auth_service, get_req_service
 from service import UserService, get_users_service
-from schemas import Token, Login
-from schemas import UserRegistrate, UserResponse
+from schemas import Token, Login, CsvPath, UserRegistrate, UserResponse
 from configs import settings
 
 router = APIRouter()
+students_router = APIRouter()
+
 
 
 @router.post("/registrate", response_model=UserResponse)
@@ -62,3 +64,14 @@ async def protected_route(
     return {
         "message": f"Hello {current_user.username if current_user.username else current_user.email}, this is a protected route!"
     }
+
+@students_router.post("/import")
+async def import_students(body: CsvPath):
+    """
+    POST /api/v1/students/import
+    {
+      "file_path": "data/students.csv"
+    }
+    """
+    task = import_students_from_csv.delay(body.file_path)
+    return {"task_id": task.id, "status": "accepted"}

@@ -17,5 +17,11 @@ db_password = "password"
 db_host = "localhost"
 db_port = 5433
 
+[redis_settings]
+redis_host = "localhost"
+redis_port = 6379
+broker_db = 0    # БД для брокера Celery
+backend_db = 1   # БД для результатов Celery
+
 
 

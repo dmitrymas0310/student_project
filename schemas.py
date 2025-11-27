@@ -61,3 +61,6 @@ class TokenData(BaseModel):
 class Login(BaseModel):
     email: str
     password: str
+
+class CsvPath(BaseModel):
+    file_path: str

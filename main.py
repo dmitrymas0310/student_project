@@ -3,6 +3,7 @@ from fastapi import FastAPI
 
 from configs import settings
 from v1_api import router as auth_router
+from v1_api import students_router 
 
 
 import asyncio
@@ -11,12 +12,12 @@ from service import StudentService
 from model import create_db
 
 async def main():
+    #await create_db()
     async with async_session_maker() as session:
         service = StudentService(session)
 
         #Заполнить БД из CSV
         await service.load_from_csv("data/students.csv")
-
 
 app = FastAPI(
     title=settings.app.app_name,
@@ -25,6 +26,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(students_router, prefix="/api/v1/students", tags=["students"])
 
 if __name__ == "__main__":
 
